@@ -5,7 +5,7 @@ import {
   isCurrentRouteBudgetPage,
 } from 'toolkit/extension/utils/ynab';
 import { formatCurrency } from 'toolkit/extension/utils/currency';
-import { getEmberView } from 'toolkit/extension/utils/ember';
+import { getBudgetMonthDisplaySubCategory } from '../utils';
 
 export class CheckCreditBalances extends Feature {
   injectCSS() {
@@ -78,7 +78,8 @@ export class CheckCreditBalances extends Feature {
     const rectifyDifference = (event) => {
       currencyInput.click();
       input.value = ynab.formatCurrency(category.budgeted + difference);
-      input.blur();
+      input.dispatchEvent(new Event('change'));
+      input.dispatchEvent(new Event('blur'));
       event.currentTarget.setAttribute('disabled', true); // Disable button once it's clicked.
     };
     const buttonDiv = this.createButton(formattedDifference, rectifyDifference);
@@ -95,10 +96,9 @@ export class CheckCreditBalances extends Feature {
   }
 
   checkCategoryForDifference(categoryElement) {
-    console.log('checkCategoryForDifference');
     if (!isCurrentMonthSelected()) return;
 
-    const category = getEmberView(categoryElement.id).category;
+    const category = getBudgetMonthDisplaySubCategory(categoryElement.dataset.entityId);
     if (!category) return;
     if (!category.isCreditCardPaymentCategory) return;
 

@@ -1,6 +1,6 @@
 import { Feature } from 'toolkit/extension/features/feature';
-import { getEmberView } from 'toolkit/extension/utils/ember';
 import { l10n } from 'toolkit/extension/utils/toolkit';
+import { getAccountsService } from 'toolkit/extension/utils/ynab';
 
 export class ImportNotification extends Feature {
   isActive = false;
@@ -59,14 +59,20 @@ export class ImportNotification extends Feature {
   checkImportTransactions() {
     this.isActive = true;
 
-    $('.nav-account-row').each((index, row) => {
-      let account = getEmberView($(row).attr('id')).account;
-      let accountName = $('.nav-account-name', row);
+    $('.nav-account-row').each((_, element) => {
+      const account = getAccountsService().activeAccounts.find(({ itemId }) => {
+        return itemId === element.dataset.accountId;
+      });
+      if (!account) {
+        return;
+      }
+
+      let accountName = $('.nav-account-name', element);
       if (accountName.length) {
         // Remove the title attribute and our underline class in case the account no longer has txns to be imported
         $(accountName).removeAttr('title').removeClass(this.importClass);
 
-        let currentTitle = $(row).find('.nav-account-name').prop('title');
+        let currentTitle = $(element).find('.nav-account-name').prop('title');
 
         // Check for both functions should be temporary until all users have been switched to new bank data
         // provider but of course we have no good way of knowing when that has occurred.

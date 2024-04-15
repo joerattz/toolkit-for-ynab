@@ -1,11 +1,15 @@
 import React from 'react';
 import { Feature } from 'toolkit/extension/features/feature';
-import { getEmberView } from 'toolkit/extension/utils/ember';
 import { componentBefore } from 'toolkit/extension/utils/react';
-import { getCurrentBudgetDate, getEntityManager } from 'toolkit/extension/utils/ynab';
+import {
+  getBudgetService,
+  getCurrentBudgetDate,
+  getEntityManager,
+} from 'toolkit/extension/utils/ynab';
 
 import { FormattedCurrency } from './FormattedCurrency';
 import { InspectorCard } from './InspectorCard';
+import { getBudgetMonthDisplaySubCategory } from '../utils';
 
 const BreakdownItem = ({ label, children, className = '' }) => {
   return (
@@ -36,7 +40,7 @@ export class DisplayTotalMonthlyGoals extends Feature {
   }
 
   extractCategoryGoalInformation(element) {
-    const category = getEmberView(element.id).category;
+    const category = getBudgetMonthDisplaySubCategory(element.dataset.entityId);
     if (!category) {
       return;
     }
@@ -66,12 +70,22 @@ export class DisplayTotalMonthlyGoals extends Feature {
       );
     });
 
+    const creditCardActivity = this.getCreditActivity();
+
     // For information about the total spent value see https://github.com/toolkit-for-ynab/toolkit-for-ynab/issues/2828
     return [
       budgetedCalculation?.immediateIncome || 0,
       budgetedCalculation?.budgeted || 0,
-      budgetedCalculation?.cashOutflows + 2 * (budgetedCalculation?.creditOutflows || 0),
+      (budgetedCalculation?.outflows || creditCardActivity) - creditCardActivity,
     ];
+  }
+
+  getCreditActivity() {
+    const budgetService = getBudgetService();
+    const category = budgetService.budgetMonthDisplayItems.find((item) => {
+      return item.isCreditCardPaymentCategory;
+    });
+    return category?.activity ?? 0;
   }
 
   calculateTotalGoals() {
@@ -148,23 +162,23 @@ export class DisplayTotalMonthlyGoals extends Feature {
     return (
       <div className={this.containerClass}>
         <InspectorCard
-          title="Total Monthly Goals"
+          title="Total Monthly Targets"
           mainAmount={totalGoals}
           className="total-monthly-goals-card"
         >
           {shouldShowGoalBreakdown && (
             <div className="ynab-breakdown">
-              <BreakdownItem label="Savings Goals">
+              <BreakdownItem label="Savings Targets">
                 <FormattedCurrency amount={savingsGoals} />
               </BreakdownItem>
-              <BreakdownItem label="Spending Goals" className="extra-bottom-space">
+              <BreakdownItem label="Spending Targets" className="extra-bottom-space">
                 <FormattedCurrency amount={spendingGoals} />
               </BreakdownItem>
-              <BreakdownItem label="Budgeted for Goals" className="colorize-currency">
+              <BreakdownItem label="Budgeted for Targets" className="colorize-currency">
                 <FormattedCurrency amount={budgeted} />
               </BreakdownItem>
               <BreakdownItem
-                label={`${needed > 0 ? 'Needed for' : 'Exceeded from'} Goals`}
+                label={`${needed > 0 ? 'Needed for' : 'Exceeded from'} Targets`}
                 className={`goal-remaining-balance ${needed > 0 ? 'negative' : 'positive'}`}
               >
                 <FormattedCurrency amount={Math.abs(needed)} />
